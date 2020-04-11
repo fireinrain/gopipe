@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -81,6 +82,37 @@ func handleClientProxy(client *net.TCPConn) {
 
 	//接收数据
 	//能否使用bufio来提高性能？
+
+	//_, err = io.Copy(remoteServerCon, client)
+	//if err != nil {
+	//	log.Println(">>>>>>: copy bytes error from client to remote server, ", err)
+	//}
+	//CopyDateFromClient2Server(client, remoteServerCon)
+	CommunicateWithClientServer(client, remoteServerCon)
+
+}
+
+//支持客户端向服务端发送数据和接收服务器发送的数据
+func CommunicateWithClientServer(client *net.TCPConn, remoteServerCon *net.TCPConn) {
+	stop := make(chan bool)
+
+	go func() {
+		_, err := io.Copy(client, remoteServerCon)
+		log.Println(err)
+		stop <- true
+	}()
+
+	go func() {
+		_, err := io.Copy(remoteServerCon, client)
+		log.Println(err)
+		stop <- true
+	}()
+
+	_ = <-stop
+}
+
+//拷贝数据
+func CopyDateFromClient2Server(client *net.TCPConn, remoteServerCon *net.TCPConn) {
 	var buffer = make([]byte, 100000)
 	for {
 		n, err := client.Read(buffer)
@@ -93,7 +125,6 @@ func handleClientProxy(client *net.TCPConn) {
 			break
 		}
 	}
-
 }
 
 //检查error
